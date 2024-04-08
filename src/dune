@@ -4,6 +4,6 @@
 
 (library
  (name thread_local_storage)
- (public_name thread-local-storage)
+ (public_name thread-local-storage_async-safe)
  (wrapped true)
  (libraries threads))
