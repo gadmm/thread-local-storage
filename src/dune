@@ -6,4 +6,5 @@
  (name thread_local_storage)
  (public_name thread-local-storage_async-safe)
  (wrapped true)
+ (foreign_stubs (language c) (names thread_local_storage) (flags -O2))
  (libraries threads))

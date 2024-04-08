@@ -3,10 +3,7 @@
 (* sanity check *)
 let () = assert (Obj.field (Obj.repr (Thread.self ())) 1 = Obj.repr ())
 
-type 'a key = {
-  index: int;  (** Unique index for this key. *)
-  default: 'a; (** Default value for this key. *)
-}
+type 'a key = int (** Unique index for this key. *)
 
 (** Counter used to allocate new keys *)
 let counter = Atomic.make 0
@@ -16,9 +13,11 @@ let counter = Atomic.make 0
     object the user can see will have the same address. *)
 let sentinel_value_for_uninit_tls_ : Obj.t = Obj.repr counter
 
-let new_key ~default : _ key =
-  let index = Atomic.fetch_and_add counter 1 in
-  { index; default }
+external c_set_sentinel_ : Obj.t -> unit = "ocaml_tls__set_sentinel"
+
+let () = c_set_sentinel_ sentinel_value_for_uninit_tls_
+
+let new_key () : _ key = Atomic.fetch_and_add counter 1
 
 type thread_internal_state = {
   _id: int;  (** Thread ID (here for padding reasons) *)
@@ -30,21 +29,48 @@ type thread_internal_state = {
   us to access the second field (unused after the thread
   has started) and stash TLS data in it. *)
 
-let[@inline] get { index; default } =
+external get_raw_ : 'a key -> 'a = "ocaml_tls__get_raw" [@@noalloc]
+
+(* reference, poor codegen *)
+let[@inline] _get_raw2_ index =
   let thread : thread_internal_state = Obj.magic (Thread.self ()) in
   let tls = thread.tls in
   if Obj.is_block tls then (
     let tls = (Obj.obj tls : Obj.t array) in
-    if index < Array.length tls then (
-      let value = Array.unsafe_get tls index in
-      if value != sentinel_value_for_uninit_tls_ then
-        Obj.obj value
-      else
-        default
-    ) else
-      default
+    if index < Array.length tls then
+      Array.unsafe_get tls index
+    else
+      sentinel_value_for_uninit_tls_
   ) else
+    sentinel_value_for_uninit_tls_
+
+let[@inline] get ~default key =
+  let v = get_raw_ key in
+  if v != sentinel_value_for_uninit_tls_ then
+    Obj.obj v
+  else
     default
+
+let[@inline] _get2_ ~default key =
+  let v = _get_raw2_ key in
+  if v != sentinel_value_for_uninit_tls_ then
+    Obj.obj v
+  else
+    default
+
+let[@inline] get_exn key =
+  let v = get_raw_ key in
+  if v != sentinel_value_for_uninit_tls_ then
+    Obj.obj v
+  else
+    raise Not_found
+
+let[@inline] get_opt key =
+  let v = get_raw_ key in
+  if v != sentinel_value_for_uninit_tls_ then
+    Some (Obj.obj v)
+  else
+    None
 
 
 (** Allocating and setting *)
@@ -85,6 +111,6 @@ let[@inline] tls_alloc_ (index : int) : Obj.t array =
     )
   )
 
-let[@inline] set key value : unit =
-  let tls = tls_alloc_ key.index in
-  Array.unsafe_set tls key.index (Obj.repr (Sys.opaque_identity value))
+let[@inline] set index value : unit =
+  let tls = tls_alloc_ index in
+  Array.unsafe_set tls index (Obj.repr (Sys.opaque_identity value))

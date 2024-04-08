@@ -1,6 +1,6 @@
 module TLS = Thread_local_storage
 
-let k1 : int TLS.key = TLS.new_key ~default:0
+let k1 : int TLS.key = TLS.new_key ()
 
 let () =
   let n = 1_000_000 in
@@ -11,20 +11,18 @@ let () =
         Thread.create
           (fun () ->
             for _i = 1 to n do
-              let r = TLS.get k1 in
+              let r = TLS.get ~default:0 k1 in
               TLS.set k1 (r + 1)
             done;
-            values.(t_idx) <- TLS.get k1)
+            values.(t_idx) <- TLS.get_exn k1)
           ())
   in
 
   Array.iter Thread.join threads;
   Array.iter (fun x -> assert (x = n)) values
 
-let dummy = ref 0
-
-let k2 : int ref TLS.key = TLS.new_key ~default:dummy
-let k3 : int ref TLS.key = TLS.new_key ~default:dummy
+let k2 : int ref TLS.key = TLS.new_key ()
+let k3 : int ref TLS.key = TLS.new_key ()
 
 let () =
   let res = ref (0, 0) in
@@ -32,12 +30,12 @@ let () =
     TLS.set k2 (ref 0);
     TLS.set k3 (ref 0);
     for _i = 1 to 1000 do
-      let r2 = TLS.get k2 in
+      let r2 = TLS.get_exn k2 in
       incr r2;
-      let r3 = TLS.get k3 in
+      let r3 = TLS.get_exn k3 in
       r3 := !r3 + 2
     done;
-    res := !(TLS.get k2), !(TLS.get k3)
+    res := !(TLS.get_exn k2), !(TLS.get_exn k3)
   in
 
   let t = Thread.create run () in
