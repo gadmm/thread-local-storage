@@ -31,6 +31,8 @@ type thread_internal_state = {
 
 external get_raw_ : 'a key -> 'a = "ocaml_tls__get_raw" [@@noalloc]
 
+let[@inline never] tls_error () = failwith "TLS entry not initialised"
+
 (* reference, poor codegen *)
 let[@inline] _get_raw2_ index =
   let thread : thread_internal_state = Obj.magic (Thread.self ()) in
@@ -44,15 +46,23 @@ let[@inline] _get_raw2_ index =
   ) else
     sentinel_value_for_uninit_tls_
 
-let[@inline] get ~default key =
+let[@inline] get key =
   let v = get_raw_ key in
   if v != sentinel_value_for_uninit_tls_ then
     Obj.obj v
   else
-    default
+    tls_error ()
 
-let[@inline] _get2_ ~default key =
+(* for codegen comparison *)
+let[@inline] _get2_ key =
   let v = _get_raw2_ key in
+  if v != sentinel_value_for_uninit_tls_ then
+    Obj.obj v
+  else
+    tls_error ()
+
+let[@inline] get_with_default ~default key =
+  let v = get_raw_ key in
   if v != sentinel_value_for_uninit_tls_ then
     Obj.obj v
   else

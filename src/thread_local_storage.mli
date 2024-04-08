@@ -11,7 +11,12 @@ val new_key : unit -> 'a key
     general rule, this should only be called at toplevel to produce
     constants, do not use it in a loop. *)
 
-val get :  default:'a -> 'a key -> 'a
+val get : 'a key -> 'a
+(** Get the value for the current thread. Can be used in asynchronous
+    callbacks. Fails with a [Failure] exception if the TLS entry has
+    not been initialised. *)
+
+val get_with_default : default:'a -> 'a key -> 'a
 (** Get the value for the current thread. Can be used in asynchronous
     callbacks. Returns the [default] argument if the TLS entry has not
     been initialised.  *)
