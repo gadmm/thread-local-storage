@@ -20,3 +20,17 @@ Distributed under the LGPL v3 with linking exception.
 Incorporates work covered by the MIT license.
 
 SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
+
+## Dependencies
+
+None
+
+## Status
+
+- Maintenance: for internal use & author's projects only. No
+  compatibility guarantees.
+- Audience: limited. Only use if you can review the full code by
+  yourself and are ready to maintain your own branch.
+- Distribution: available through the source repository only.
+
+Get in touch with the author if you wish the status to evolve.
