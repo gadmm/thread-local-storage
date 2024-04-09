@@ -1,10 +1,5 @@
 #include "caml/mlvalues.h"
 #include "caml/memory.h"
-#include "caml/version.h"
-
-#include <pthread.h>
-
-#include <assert.h>
 
 static value sentinel;
 
